@@ -1,38 +1,43 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Tabs } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-export default function TabLayout() {
+export default function Layout() {
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: "blue" }}>
+
+      {/* HOME */}
       <Tabs.Screen
-        name="home"
+        name="Home"
         options={{
-          title: "home",
+          title: "Home",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="home" color={color} />
+            <Ionicons name="home-outline" size={26} color={color} />
           ),
         }}
       />
 
+      {/* PROJECT */}
       <Tabs.Screen
-        name="project"
+        name="Project"
         options={{
-          title: "project",
+          title: "Projects",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
+            <Ionicons name="star-outline" size={26} color={color} />
           ),
         }}
       />
 
+      {/* CONTACT */}
       <Tabs.Screen
-        name="contact"
+        name="Contact"
         options={{
-          title: "contact",
+          title: "Contact",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
+            <Ionicons name="call-outline" size={26} color={color} />
           ),
         }}
       />
+
     </Tabs>
   );
 }
