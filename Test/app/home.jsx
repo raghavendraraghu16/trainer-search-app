@@ -1,111 +1,206 @@
-import React from "react";
-import { SafeAreaView, ScrollView, View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-const goals = [
-  { label: "Weekly Sessions", value: "05 / 06", progress: 0.82 },
-  { label: "Mobility Minutes", value: "140 / 180", progress: 0.64 },
-  { label: "Recovery Days", value: "2 scheduled", progress: 1 },
-];
-
-const schedule = [
+const initialMessages = [
   {
     id: "1",
-    title: "Strength Foundations",
-    coach: "Coach Avani",
-    time: "Today · 5:00 PM",
-    location: "Form Lab · Studio 3",
+    type: "text",
+    from: "bot",
+    text: "Morning Raghu — Session Flow has your week staged. Want me to reshuffle anything?",
+    timestamp: "07:42",
   },
   {
     id: "2",
-    title: "Breathwork Reset",
-    coach: "Coach Malik",
-    time: "Fri · 7:30 AM",
-    location: "Haven Remote",
+    type: "agenda",
+    from: "bot",
+    items: [
+      { title: "Today · 5:15 PM", detail: "Strength lab · Coach Avani" },
+      { title: "Thu · 7:30 AM", detail: "Remote breathwork · Malik" },
+      { title: "Sat · 8:00 AM", detail: "Trail prep · Theo" },
+    ],
+    timestamp: "07:42",
   },
   {
     id: "3",
-    title: "Run Conditioning",
-    coach: "Coach Theo",
-    time: "Sun · 8:00 AM",
-    location: "Seaside Track",
+    type: "text",
+    from: "user",
+    text: "Slide today’s lift to Thursday night? My lab review got extended.",
+    timestamp: "07:43",
+  },
+  {
+    id: "4",
+    type: "checklist",
+    from: "bot",
+    title: "Shift strength block",
+    steps: [
+      "Ping Avani for new slot",
+      "Auto-move conditioning cooldown",
+      "Add recovery tag to Friday",
+    ],
+    timestamp: "07:43",
   },
 ];
 
-export default function Home() {
+const quickReplies = ["Reschedule", "Log soreness", "Share readiness score"];
+
+export default function SessionChatScreen() {
+  const [feed, setFeed] = useState(initialMessages);
+  const [draft, setDraft] = useState("");
+
+  const handleSend = (value) => {
+    const text = (value ?? draft).trim();
+    if (!text) return;
+    const userMessage = {
+      id: Date.now().toString(),
+      type: "text",
+      from: "user",
+      text,
+      timestamp: formatNow(),
+    };
+    setFeed((prev) => [...prev, userMessage]);
+    setDraft("");
+    setTimeout(() => {
+      setFeed((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-bot`,
+          type: "text",
+          from: "bot",
+          text: "Cool, marking that. I’ll confirm times once coaches reply.",
+          timestamp: formatNow(),
+        },
+      ]);
+    }, 900);
+  };
+
+  const renderItem = ({ item }) => {
+    if (item.type === "agenda") {
+      return <AgendaBubble {...item} />;
+    }
+    if (item.type === "checklist") {
+      return <ChecklistBubble {...item} />;
+    }
+    return <ChatBubble {...item} />;
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="flame-outline" color="#5cf4d4" size={24} />
-          </View>
-          <View style={styles.heroText}>
-            <Text style={styles.heroOverline}>This week</Text>
-            <Text style={styles.heroTitle}>Consistency unlocked</Text>
-            <Text style={styles.heroSubtitle}>
-              You’re one session away from hitting your streak goal.
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.badge}>Session Flow</Text>
+            <Text style={styles.title}>Your weekly co-pilot</Text>
+            <Text style={styles.subtitle}>
+              Ask to shift sessions, sync calendars, or log recovery in one
+              chat.
             </Text>
           </View>
+          <Ionicons name="time-outline" size={26} color="#5cf4d4" />
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Goals snapshot</Text>
-          <Text style={styles.sectionLink}>Customize</Text>
-        </View>
+        <FlatList
+          data={feed}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
 
-        <View style={styles.goalGrid}>
-          {goals.map((goal) => (
-            <View style={styles.goalCard} key={goal.label}>
-              <Text style={styles.goalLabel}>{goal.label}</Text>
-              <Text style={styles.goalValue}>{goal.value}</Text>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[styles.progressFill, { width: `${goal.progress * 100}%` }]}
-                />
-              </View>
-            </View>
+        <View style={styles.quickRow}>
+          {quickReplies.map((reply) => (
+            <TouchableOpacity
+              key={reply}
+              style={styles.quickChip}
+              onPress={() => handleSend(reply)}
+            >
+              <Ionicons name="flash-outline" size={14} color="#5cf4d4" />
+              <Text style={styles.quickText}>{reply}</Text>
+            </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming schedule</Text>
-          <Text style={styles.sectionLink}>Sync calendar</Text>
+        <View style={styles.composer}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Tell Flow what you need…"
+            placeholderTextColor="#8a90c3"
+            style={styles.input}
+            multiline
+          />
+          <TouchableOpacity style={styles.sendBtn} onPress={() => handleSend()}>
+            <Ionicons name="send" size={18} color="#05091e" />
+          </TouchableOpacity>
         </View>
-
-        {schedule.map((item) => (
-          <View style={styles.sessionCard} key={item.id}>
-            <View style={styles.sessionBadge}>
-              <Ionicons name="pulse" size={20} color="#05091e" />
-            </View>
-            <View style={styles.sessionCopy}>
-              <Text style={styles.sessionTitle}>{item.title}</Text>
-              <Text style={styles.sessionMeta}>{item.time}</Text>
-              <Text style={styles.sessionCoach}>{item.coach}</Text>
-              <Text style={styles.sessionMeta}>{item.location}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#8a90c3" />
-          </View>
-        ))}
-
-        <View style={styles.tipCard}>
-          <View style={styles.tipIcon}>
-            <Ionicons name="leaf-outline" size={22} color="#5cf4d4" />
-          </View>
-          <View style={styles.tipCopy}>
-            <Text style={styles.tipTitle}>Wellness insight</Text>
-            <Text style={styles.tipBody}>
-              Cold plunge after your Thursday lift can reduce recovery time by
-              18%. Add it to your plan?
-            </Text>
-          </View>
-          <Ionicons name="add-circle-outline" size={24} color="#5cf4d4" />
-        </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function ChatBubble({ from, text, timestamp }) {
+  const isUser = from === "user";
+  return (
+    <View
+      style={[
+        styles.bubble,
+        isUser ? styles.bubbleUser : styles.bubbleBot,
+        isUser ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" },
+      ]}
+    >
+      <Text style={[styles.bubbleText, isUser && { color: "#05091e" }]}>
+        {text}
+      </Text>
+      <Text style={[styles.time, isUser && { color: "#05091e" }]}>
+        {timestamp}
+      </Text>
+    </View>
+  );
+}
+
+function AgendaBubble({ items, timestamp }) {
+  return (
+    <View style={[styles.bubble, styles.agendaBubble]}>
+      <Text style={styles.agendaTitle}>Agenda overview</Text>
+      {items.map((item) => (
+        <View key={item.title} style={styles.agendaRow}>
+          <View style={styles.agendaDot} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.agendaPrimary}>{item.title}</Text>
+            <Text style={styles.agendaSecondary}>{item.detail}</Text>
+          </View>
+        </View>
+      ))}
+      <Text style={styles.time}>{timestamp}</Text>
+    </View>
+  );
+}
+
+function ChecklistBubble({ title, steps, timestamp }) {
+  return (
+    <View style={[styles.bubble, styles.checkBubble]}>
+      <Text style={styles.agendaTitle}>{title}</Text>
+      {steps.map((step) => (
+        <View key={step} style={styles.checkRow}>
+          <Ionicons name="checkbox-outline" size={16} color="#5cf4d4" />
+          <Text style={styles.agendaSecondary}>{step}</Text>
+        </View>
+      ))}
+      <Text style={styles.time}>{timestamp}</Text>
+    </View>
   );
 }
 
@@ -114,151 +209,146 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#030515",
   },
-  container: {
+  header: {
     padding: 20,
-    gap: 20,
-  },
-  hero: {
-    flexDirection: "row",
-    backgroundColor: "#10163c",
-    borderRadius: 24,
-    padding: 18,
-    alignItems: "center",
-    gap: 16,
-  },
-  heroIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: "rgba(92,244,212,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  heroText: {
-    flex: 1,
-  },
-  heroOverline: {
-    color: "#8a90c3",
-    textTransform: "uppercase",
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  heroTitle: {
-    color: "#f6f7fb",
-    fontSize: 20,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  heroSubtitle: {
-    color: "#b0b5d0",
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    gap: 12,
   },
-  sectionTitle: {
-    color: "#e9ecff",
-    fontSize: 18,
+  badge: {
+    color: "#5cf4d4",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
     fontWeight: "700",
   },
-  sectionLink: {
-    color: "#5cf4d4",
-    fontWeight: "600",
-  },
-  goalGrid: {
-    gap: 16,
-  },
-  goalCard: {
-    backgroundColor: "#0b0f29",
-    borderRadius: 18,
-    padding: 18,
-  },
-  goalLabel: {
-    color: "#8a90c3",
-    textTransform: "uppercase",
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  goalValue: {
+  title: {
     color: "#f6f7fb",
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     marginTop: 6,
   },
-  progressTrack: {
-    height: 8,
-    borderRadius: 99,
-    backgroundColor: "rgba(92,244,212,0.12)",
-    marginTop: 12,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 99,
-    backgroundColor: "#5cf4d4",
-  },
-  sessionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#0b0f29",
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 12,
-    gap: 14,
-  },
-  sessionBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "#5cf4d4",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sessionCopy: {
-    flex: 1,
-  },
-  sessionTitle: {
-    color: "#f6f7fb",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  sessionMeta: {
-    color: "#8a90c3",
-    marginTop: 2,
-  },
-  sessionCoach: {
-    color: "#5cf4d4",
-    marginTop: 6,
-    fontWeight: "600",
-  },
-  tipCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#10163c",
-    borderRadius: 24,
-    padding: 18,
-    gap: 14,
-  },
-  tipIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "rgba(92,244,212,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tipCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  tipTitle: {
-    color: "#f6f7fb",
-    fontWeight: "700",
-  },
-  tipBody: {
+  subtitle: {
     color: "#b0b5d0",
     lineHeight: 20,
+    marginTop: 4,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 140,
+    gap: 16,
+  },
+  bubble: {
+    maxWidth: "88%",
+    padding: 14,
+    borderRadius: 20,
+  },
+  bubbleBot: {
+    backgroundColor: "#10163c",
+    borderTopLeftRadius: 6,
+  },
+  bubbleUser: {
+    backgroundColor: "#5cf4d4",
+    borderTopRightRadius: 6,
+  },
+  bubbleText: {
+    color: "#f6f7fb",
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  time: {
+    fontSize: 11,
+    color: "#8a90c3",
+    marginTop: 8,
+  },
+  agendaBubble: {
+    backgroundColor: "#0b0f29",
+  },
+  agendaTitle: {
+    color: "#f6f7fb",
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  agendaRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  agendaDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "#5cf4d4",
+    marginTop: 6,
+  },
+  agendaPrimary: {
+    color: "#f6f7fb",
+    fontWeight: "600",
+  },
+  agendaSecondary: {
+    color: "#b0b5d0",
+    fontSize: 13,
+    marginTop: 2,
+  },
+  checkBubble: {
+    backgroundColor: "#10163c",
+  },
+  checkRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  quickRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  quickChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#10163c",
+    borderWidth: 1,
+    borderColor: "rgba(92,244,212,0.35)",
+  },
+  quickText: {
+    color: "#f6f7fb",
+    fontWeight: "600",
+  },
+  composer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#05091e",
+  },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    color: "#f6f7fb",
+    fontSize: 15,
+  },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#5cf4d4",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
+
+function formatNow() {
+  const date = new Date();
+  return `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+}

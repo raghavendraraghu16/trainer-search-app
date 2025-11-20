@@ -34,9 +34,13 @@ export default function Layout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Discover",
+          title: "Coach Chat",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="rocket-outline" size={size} color={color} />
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -44,9 +48,9 @@ export default function Layout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: "Home",
+          title: "Sessions",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pulse-outline" size={size} color={color} />
+            <Ionicons name="time-outline" size={size} color={color} />
           ),
         }}
       />
@@ -56,7 +60,7 @@ export default function Layout() {
         options={{
           title: "Programs",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="layers-outline" size={size} color={color} />
+            <Ionicons name="construct-outline" size={size} color={color} />
           ),
         }}
       />
